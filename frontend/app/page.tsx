@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import UploadGarment from '@/components/UploadGarment';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   return (
@@ -17,29 +19,41 @@ export default function Home() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-8 my-12">
-        <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-          <div className="text-4xl mb-4">📸</div>
-          <h3 className="text-xl font-semibold mb-2">Upload & Organize</h3>
-          <p className="text-gray-600">
-            Take photos of your clothes and let AI automatically categorize them
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-          <div className="text-4xl mb-4">✨</div>
-          <h3 className="text-xl font-semibold mb-2">AI Suggestions</h3>
-          <p className="text-gray-600">
-            Get personalized outfit recommendations based on occasion and weather
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-          <div className="text-4xl mb-4">🧺</div>
-          <h3 className="text-xl font-semibold mb-2">Track Everything</h3>
-          <p className="text-gray-600">
-            Keep track of what's in the laundry and what's available
-          </p>
-        </div>
+        <Card className="text-center">
+          <CardHeader>
+            <div className="text-4xl">📸</div>
+            <CardTitle>Upload & Organize</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Take photos of your clothes and let AI automatically categorize them
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="text-center">
+          <CardHeader>
+            <div className="text-4xl">✨</div>
+            <CardTitle>AI Suggestions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Get personalized outfit recommendations based on occasion and weather
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="text-center">
+          <CardHeader>
+            <div className="text-4xl">🧺</div>
+            <CardTitle>Track Everything</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Keep track of what's in the laundry and what's available
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div>

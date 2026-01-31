@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getOutfits, deleteOutfit } from '@/lib/api';
 import { Outfit } from '@/types';
 import GarmentCard from '@/components/GarmentCard';
+import { Button } from '@/components/ui/button';
 
 export default function OutfitsPage() {
   const [outfits, setOutfits] = useState<Outfit[]>([]);
@@ -41,12 +42,7 @@ export default function OutfitsPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">My Outfits</h1>
-        <button
-          onClick={loadOutfits}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          Refresh
-        </button>
+        <Button onClick={loadOutfits}>Refresh</Button>
       </div>
 
       {loading ? (
@@ -78,12 +74,12 @@ export default function OutfitsPage() {
                     </p>
                   )}
                 </div>
-                <button
+                <Button
+                  variant="destructive"
                   onClick={() => handleDelete(outfit.id)}
-                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
                 >
                   Delete
-                </button>
+                </Button>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

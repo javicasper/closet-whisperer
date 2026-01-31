@@ -5,6 +5,7 @@ import { generateOutfit, createOutfit } from '@/lib/api';
 import { useGarmentStore } from '@/store/garments.store';
 import GarmentCard from './GarmentCard';
 import { OutfitSuggestion } from '@/types';
+import { Button } from '@/components/ui/button';
 
 export default function OutfitBuilder() {
   const [prompt, setPrompt] = useState('');
@@ -64,13 +65,13 @@ export default function OutfitBuilder() {
             />
           </div>
           
-          <button
+          <Button
             onClick={handleGenerate}
             disabled={loading || !prompt.trim()}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="w-full h-12"
           >
             {loading ? 'Generating suggestions...' : 'Generate Outfit'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -99,12 +100,12 @@ export default function OutfitBuilder() {
                       {suggestion.reasoning}
                     </p>
                   </div>
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => handleSave(suggestion)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
                   >
                     Save Outfit
-                  </button>
+                  </Button>
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -1,23 +1,28 @@
-FROM node:20-alpine
+FROM node:20-alpine AS deps
 
 WORKDIR /app
-
-# Install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
-# Copy prisma schema
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY prisma ./prisma/
 RUN npx prisma generate
-
-# Copy source
 COPY . .
-
-# Build TypeScript
 RUN npm run build
 
-# Expose port
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm ci
+
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
 EXPOSE 4000
 
-# Run migrations and start
-CMD npx prisma migrate deploy && npm start
+CMD npx prisma migrate deploy && node dist/index.js

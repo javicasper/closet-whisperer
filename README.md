@@ -1,8 +1,20 @@
 # 👗 Closet Whisperer
 
+[![CI](https://github.com/javicasper/closet-whisperer/actions/workflows/ci.yml/badge.svg)](https://github.com/javicasper/closet-whisperer/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20-green.svg)](https://nodejs.org/)
+
 AI-powered virtual closet for smart outfit recommendations. Single-user application that helps you manage your wardrobe and get intelligent outfit suggestions.
 
-## Features
+<p align="center">
+  <img src="https://img.shields.io/badge/🎨-Fashion-ff69b4" alt="Fashion" />
+  <img src="https://img.shields.io/badge/🤖-AI%20Powered-blueviolet" alt="AI" />
+  <img src="https://img.shields.io/badge/🐳-Docker-blue" alt="Docker" />
+</p>
+
+## ✨ Features
 
 - 📸 **Smart Garment Analysis**: Upload photos of your clothes and let AI automatically identify type, color, and style
 - 🎨 **Outfit Generation**: AI creates personalized outfit combinations from your wardrobe
@@ -196,7 +208,7 @@ PORT=4000
 
 ### Frontend (.env)
 ```
-NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ```
 
 ## License

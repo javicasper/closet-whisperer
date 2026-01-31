@@ -237,7 +237,7 @@ docker-compose logs postgres
 ### Frontend can't reach backend
 Make sure `NEXT_PUBLIC_API_URL` in `frontend/.env.local` is correct:
 ```
-NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ```
 
 ### MinIO images not loading

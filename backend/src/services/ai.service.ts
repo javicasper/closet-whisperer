@@ -1,14 +1,35 @@
 import { config } from '../config.js';
 
+interface OpenRouterTool {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, any>;
+  };
+}
+
+interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
 interface OpenRouterMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string | Array<{ type: 'text' | 'image_url'; text?: string; image_url?: { url: string } }>;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
 }
 
 interface OpenRouterResponse {
   choices: Array<{
     message: {
-      content: string;
+      content?: string;
+      tool_calls?: ToolCall[];
     };
   }>;
 }
@@ -113,25 +134,108 @@ Return your response in JSON format:
       },
     ];
 
-    // For now, we'll simulate tool calls by including available garments in context
-    // In a full MCP implementation, this would be done via function calling
-    const availableGarments = await mcpTools.getAvailableGarments();
-    
-    messages.push({
-      role: 'system',
-      content: `Available garments in wardrobe:\n${JSON.stringify(availableGarments, null, 2)}`,
-    });
+    const tools: OpenRouterTool[] = [
+      {
+        type: 'function',
+        function: {
+          name: 'searchGarments',
+          description: 'Search garments with filters (returns available garments by default)',
+          parameters: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['TOP', 'BOTTOM', 'DRESS', 'OUTERWEAR', 'SHOES', 'ACCESSORY'] },
+              color: { type: 'string' },
+              season: { type: 'string', enum: ['SPRING', 'SUMMER', 'FALL', 'WINTER', 'ALL_SEASON'] },
+              occasion: { type: 'string' },
+              status: { type: 'string', enum: ['AVAILABLE', 'IN_LAUNDRY', 'UNAVAILABLE'] },
+            },
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'getGarmentById',
+          description: 'Get a specific garment by ID',
+          parameters: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+            },
+            required: ['id'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'getAvailableGarments',
+          description: 'Get all available garments (not in laundry)',
+          parameters: {
+            type: 'object',
+            properties: {},
+          },
+        },
+      },
+    ];
 
-    const response = await this.makeRequest(messages);
-    const content = response.choices[0].message.content;
-    
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, content];
-    const jsonStr = jsonMatch[1] || content;
-    
-    return JSON.parse(jsonStr.trim());
+    for (let i = 0; i < 4; i++) {
+      const response = await this.makeRequest(messages, tools);
+      const message = response.choices[0].message;
+
+      if (message.tool_calls && message.tool_calls.length > 0) {
+        messages.push({
+          role: 'assistant',
+          content: message.content || '',
+          tool_calls: message.tool_calls,
+        });
+
+        for (const call of message.tool_calls) {
+          const args = call.function.arguments ? JSON.parse(call.function.arguments) : {};
+          let result: any;
+
+          switch (call.function.name) {
+            case 'searchGarments':
+              result = await mcpTools.searchGarments(args);
+              break;
+            case 'getGarmentById':
+              result = await mcpTools.getGarmentById(args.id);
+              break;
+            case 'getAvailableGarments':
+              result = await mcpTools.getAvailableGarments();
+              break;
+            default:
+              result = { error: 'Unknown tool' };
+          }
+
+          messages.push({
+            role: 'tool',
+            tool_call_id: call.id,
+            content: JSON.stringify(result),
+          });
+        }
+
+        continue;
+      }
+
+      if (!message.content) {
+        throw new Error('No content returned from OpenRouter');
+      }
+
+      const content = message.content;
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, content];
+      const jsonStr = jsonMatch[1] || content;
+
+      return JSON.parse(jsonStr.trim());
+    }
+
+    throw new Error('OpenRouter did not return a final response');
   }
 
-  private async makeRequest(messages: OpenRouterMessage[]): Promise<OpenRouterResponse> {
+  private async makeRequest(
+    messages: OpenRouterMessage[],
+    tools?: OpenRouterTool[]
+  ): Promise<OpenRouterResponse> {
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -143,6 +247,8 @@ Return your response in JSON format:
       body: JSON.stringify({
         model: this.model,
         messages,
+        tools,
+        tool_choice: tools ? 'auto' : undefined,
       }),
     });
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getLaundryQueue, removeFromLaundry } from '@/lib/api';
 import GarmentCard from '@/components/GarmentCard';
+import { Button } from '@/components/ui/button';
 
 export default function LaundryPage() {
   const [laundryItems, setLaundryItems] = useState<any[]>([]);
@@ -39,12 +40,7 @@ export default function LaundryPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">🧺 Laundry Queue</h1>
-        <button
-          onClick={loadLaundry}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          Refresh
-        </button>
+        <Button onClick={loadLaundry}>Refresh</Button>
       </div>
 
       {loading ? (
@@ -68,12 +64,13 @@ export default function LaundryPage() {
             {laundryItems.map((item) => (
               <div key={item.id} className="relative">
                 <GarmentCard garment={item.garment} />
-                <button
+                <Button
+                  size="sm"
+                  className="absolute top-2 left-2"
                   onClick={() => handleRemove(item.garmentId)}
-                  className="absolute top-2 left-2 bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
                 >
                   Mark Clean
-                </button>
+                </Button>
                 {item.estimatedAvailableAt && (
                   <div className="mt-2 text-xs text-gray-600 text-center">
                     Available: {new Date(item.estimatedAvailableAt).toLocaleDateString()}

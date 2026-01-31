@@ -5,6 +5,7 @@ import { getGarments, deleteGarment, addToLaundry } from '@/lib/api';
 import { useGarmentStore } from '@/store/garments.store';
 import GarmentCard from '@/components/GarmentCard';
 import UploadGarment from '@/components/UploadGarment';
+import { Button } from '@/components/ui/button';
 
 export default function ClosetPage() {
   const { garments, setGarments, removeGarment, updateGarment, filters, setFilters } = useGarmentStore();
@@ -53,12 +54,7 @@ export default function ClosetPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">My Closet</h1>
-        <button
-          onClick={loadGarments}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          Refresh
-        </button>
+        <Button onClick={loadGarments}>Refresh</Button>
       </div>
 
       <UploadGarment />
@@ -112,12 +108,9 @@ export default function ClosetPage() {
             className="border rounded-lg p-2"
           />
 
-          <button
-            onClick={() => setFilters({})}
-            className="bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-          >
+          <Button variant="secondary" onClick={() => setFilters({})}>
             Clear Filters
-          </button>
+          </Button>
         </div>
       </div>
 

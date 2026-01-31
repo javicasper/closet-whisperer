@@ -24,7 +24,11 @@ export class MCPTools {
     if (params.color) where.color = { contains: params.color, mode: 'insensitive' };
     if (params.season) where.season = { has: params.season };
     if (params.occasion) where.occasion = { has: params.occasion };
-    if (params.status) where.status = params.status;
+    if (params.status) {
+      where.status = params.status;
+    } else {
+      where.status = GarmentStatus.AVAILABLE;
+    }
 
     const garments = await prisma.garment.findMany({
       where,
