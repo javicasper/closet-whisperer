@@ -89,9 +89,17 @@ Be accurate and concise. Only return valid JSON.`,
     const response = await this.makeRequest(messages);
     const content = response.choices[0].message.content;
     
+    if (!content) {
+      throw new Error('No content returned from OpenRouter');
+    }
+    
     // Extract JSON from response (might be wrapped in markdown code blocks)
     const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, content];
     const jsonStr = jsonMatch[1] || content;
+    
+    if (!jsonStr) {
+      throw new Error('Failed to extract JSON from response');
+    }
     
     return JSON.parse(jsonStr.trim());
   }
@@ -257,7 +265,7 @@ Return your response in JSON format:
       throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
     }
 
-    return response.json();
+    return response.json() as Promise<OpenRouterResponse>;
   }
 }
 

@@ -41,7 +41,7 @@ export async function garmentRoutes(fastify: FastifyInstance) {
           description: analysis.description,
           brand: analysis.brand || undefined,
           status: GarmentStatus.AVAILABLE,
-          metadata: { aiAnalysis: analysis, storageKey: key },
+          metadata: { aiAnalysis: analysis as any, storageKey: key },
         },
       });
 
@@ -221,7 +221,7 @@ export async function garmentRoutes(fastify: FastifyInstance) {
   });
 
   // Get laundry queue
-  fastify.get('/laundry', async (request, reply) => {
+  fastify.get('/laundry', async (_request, reply) => {
     const laundryItems = await prisma.laundryQueue.findMany({
       include: {
         garment: true,

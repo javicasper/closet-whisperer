@@ -108,7 +108,7 @@ export async function outfitRoutes(fastify: FastifyInstance) {
   });
 
   // List outfits
-  fastify.get('/outfits', async (request, reply) => {
+  fastify.get('/outfits', async (_request, reply) => {
     const outfits = await prisma.outfit.findMany({
       include: {
         garments: {

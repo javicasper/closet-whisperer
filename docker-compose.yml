@@ -1,5 +1,11 @@
 version: '3.8'
 
+networks:
+  proxy:
+    external: true
+  closet-internal:
+    driver: bridge
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -10,8 +16,10 @@ services:
       POSTGRES_DB: closet
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
+    networks:
+      - closet-internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U closet"]
       interval: 10s
@@ -21,30 +29,14 @@ services:
   redis:
     image: redis:7-alpine
     container_name: closet-redis
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
+    networks:
+      - closet-internal
     volumes:
       - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  minio:
-    image: minio/minio:latest
-    container_name: closet-minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    volumes:
-      - minio-data:/data
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,43 +46,56 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: closet-backend
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://closet:closet@postgres:5432/closet
       REDIS_URL: redis://redis:6379
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: garments
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      OPENROUTER_MODEL: openai/gpt-4o
-      PORT: 4000
-      NODE_ENV: production
-    ports:
-      - "4000:4000"
+      # MinIO existente en la infra - loaded from env_file
+    expose:
+      - "4000"
+    networks:
+      - closet-internal
+      - proxy
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_healthy
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.closet-backend.rule=Host(`closet.loopylab.app`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.closet-backend.entrypoints=websecure"
+      - "traefik.http.routers.closet-backend.tls.certresolver=le"
+      - "traefik.http.routers.closet-backend.middlewares=authelia"
+      - "traefik.http.services.closet-backend.loadbalancer.server.port=4000"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://closet.loopylab.app/api
     container_name: closet-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:4000/api
-    ports:
-      - "3000:3000"
+      - NEXT_PUBLIC_API_URL=https://closet.loopylab.app/api
+    expose:
+      - "3000"
+    networks:
+      - closet-internal
+      - proxy
     depends_on:
       - backend
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.closet-frontend.rule=Host(`closet.loopylab.app`)"
+      - "traefik.http.routers.closet-frontend.entrypoints=websecure"
+      - "traefik.http.routers.closet-frontend.tls.certresolver=le"
+      - "traefik.http.routers.closet-frontend.middlewares=authelia"
+      - "traefik.http.services.closet-frontend.loadbalancer.server.port=3000"
 
 volumes:
   postgres-data:
   redis-data:
-  minio-data:
