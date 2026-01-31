@@ -16,10 +16,12 @@ build/
 out/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 
 # OS
 .DS_Store
