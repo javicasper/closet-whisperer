@@ -41,10 +41,34 @@ AI-powered virtual closet for smart outfit recommendations. Single-user applicat
 
 ### Prerequisites
 - Docker and Docker Compose
-- Node.js 18+ (for local development)
-- OpenRouter API key
+- Node.js 20+ (for local development)
+- OpenRouter API key (get one at https://openrouter.ai/)
 
-### Setup
+### 🚀 Automated Setup
+
+Run the setup script:
+```bash
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+```
+
+Then add your OpenRouter API key to `backend/.env`:
+```
+OPENROUTER_API_KEY=sk-or-v1-your_key_here
+```
+
+### 🐳 Start with Docker
+
+```bash
+docker-compose up -d
+```
+
+Wait ~30 seconds for services to initialize, then access:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:4000
+- **MinIO Console**: http://localhost:9001 (minioadmin / minioadmin)
+
+### 🛠️ Manual Setup
 
 1. Clone the repository:
 ```bash
@@ -55,28 +79,47 @@ cd closet-whisperer
 2. Create environment files:
 ```bash
 cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+cp frontend/.env.example frontend/.env.local
 ```
 
 3. Add your OpenRouter API key to `backend/.env`:
 ```
-OPENROUTER_API_KEY=your_key_here
+OPENROUTER_API_KEY=sk-or-v1-your_key_here
 ```
 
-4. Start all services:
+4. Start infrastructure services:
 ```bash
-docker-compose up -d
+docker-compose up -d postgres redis minio
 ```
 
-5. Run database migrations:
+5. Install dependencies:
 ```bash
-docker-compose exec backend npm run prisma:migrate
+cd backend && npm install
+cd ../frontend && npm install
 ```
 
-6. Access the application:
+6. Run database migrations:
+```bash
+cd backend
+npx prisma migrate deploy
+npx prisma generate
+```
+
+7. Start backend (in one terminal):
+```bash
+cd backend
+npm run dev
+```
+
+8. Start frontend (in another terminal):
+```bash
+cd frontend
+npm run dev
+```
+
+9. Access the application:
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:4000
-- MinIO Console: http://localhost:9001 (user: minioadmin / pass: minioadmin)
 
 ## Development
 
