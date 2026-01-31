@@ -54,11 +54,6 @@ export default function ThemeProvider({ children }: ThemeProviderProps) {
     setThemeState((prev) => (prev === 'white' ? 'g100' : 'white'));
   };
 
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return null;
-  }
-
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
