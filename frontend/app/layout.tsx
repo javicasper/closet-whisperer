@@ -1,28 +1,33 @@
-import { Inter } from "next/font/google";
-import "./globals.css";
-import Navigation from "@/components/Navigation";
+'use client';
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata = {
-  title: "Closet Whisperer - AI-Powered Virtual Closet",
-  description: "Smart outfit recommendations powered by AI. Manage your wardrobe effortlessly.",
-};
+import './globals.css';
+import { useState } from 'react';
+import { Content } from '@carbon/react';
+import ThemeProvider from '@/components/theme/ThemeProvider';
+import AppHeader from '@/components/layout/AppHeader';
+import AppSideNav from '@/components/layout/AppSideNav';
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
+
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          <Navigation />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <head>
+        <title>Closet Whisperer - AI-Powered Virtual Closet</title>
+        <meta name="description" content="Smart outfit recommendations powered by AI. Manage your wardrobe effortlessly." />
+      </head>
+      <body>
+        <ThemeProvider>
+          <AppHeader onMenuClick={() => setIsSideNavExpanded(!isSideNavExpanded)} />
+          <AppSideNav isOpen={isSideNavExpanded} />
+          <Content style={{ marginTop: '3rem', padding: '2rem' }}>
             {children}
-          </main>
-        </div>
+          </Content>
+        </ThemeProvider>
       </body>
     </html>
   );

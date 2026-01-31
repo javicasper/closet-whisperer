@@ -1,16 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Button,
+  Select,
+  SelectItem,
+  TextInput,
+  Tile,
+  InlineNotification,
+  Loading,
+  Grid,
+  Column,
+} from '@carbon/react';
+import { Upload, Renew, Filter } from '@carbon/icons-react';
 import { getGarments, deleteGarment, addToLaundry } from '@/lib/api';
 import { useGarmentStore } from '@/store/garments.store';
-import GarmentCard from '@/components/GarmentCard';
-import UploadGarment from '@/components/UploadGarment';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/lib/toast';
+import GarmentGrid from '@/components/garments/GarmentGrid';
+import UploadModal from '@/components/garments/UploadModal';
 
 export default function ClosetPage() {
   const { garments, setGarments, removeGarment, updateGarment, filters, setFilters } = useGarmentStore();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   useEffect(() => {
     loadGarments();
@@ -18,14 +30,14 @@ export default function ClosetPage() {
 
   const loadGarments = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await getGarments(filters);
-      // Handle new pagination response format
-      const data = Array.isArray(response) ? response : response.data || [];
+      const data = Array.isArray(response) ? response : (response as any).data || [];
       setGarments(data);
     } catch (error) {
       console.error('Load error:', error);
-      toast.error('Failed to load garments');
+      setError('Failed to load garments. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -33,14 +45,13 @@ export default function ClosetPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this garment? This action cannot be undone.')) return;
-    
+
     try {
       await deleteGarment(id);
       removeGarment(id);
-      toast.success('Garment deleted successfully');
     } catch (error) {
       console.error('Delete error:', error);
-      toast.error('Failed to delete garment');
+      setError('Failed to delete garment.');
     }
   };
 
@@ -48,102 +59,180 @@ export default function ClosetPage() {
     try {
       await addToLaundry(id);
       updateGarment(id, { status: 'IN_LAUNDRY' });
-      toast.success('Added to laundry! 🧺');
     } catch (error) {
       console.error('Laundry error:', error);
-      toast.error('Failed to add to laundry');
+      setError('Failed to add to laundry.');
     }
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">My Closet</h1>
-        <Button onClick={loadGarments}>Refresh</Button>
-      </div>
+    <div>
+      {/* Header */}
+      <Grid fullWidth narrow className="mb-6">
+        <Column lg={12} md={6} sm={4}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+            My Closet
+          </h1>
+          <p style={{ color: 'var(--cds-text-secondary)' }}>
+            Manage your wardrobe and keep track of your garments
+          </p>
+        </Column>
+        <Column lg={4} md={2} sm={4} className="flex items-end justify-end">
+          <div className="flex gap-2">
+            <Button
+              kind="secondary"
+              renderIcon={Renew}
+              onClick={loadGarments}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
+            <Button
+              renderIcon={Upload}
+              onClick={() => setUploadModalOpen(true)}
+            >
+              Upload Garment
+            </Button>
+          </div>
+        </Column>
+      </Grid>
 
-      <UploadGarment />
+      {/* Error Notification */}
+      {error && (
+        <Grid fullWidth narrow className="mb-4">
+          <Column lg={16} md={8} sm={4}>
+            <InlineNotification
+              kind="error"
+              title="Error"
+              subtitle={error}
+              onCloseButtonClick={() => setError(null)}
+            />
+          </Column>
+        </Grid>
+      )}
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Filters</h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <select
-            value={filters.type || ''}
-            onChange={(e) => setFilters({ ...filters, type: e.target.value || undefined })}
-            className="border rounded-lg p-2"
-          >
-            <option value="">All Types</option>
-            <option value="TOP">Tops</option>
-            <option value="BOTTOM">Bottoms</option>
-            <option value="DRESS">Dresses</option>
-            <option value="OUTERWEAR">Outerwear</option>
-            <option value="SHOES">Shoes</option>
-            <option value="ACCESSORY">Accessories</option>
-          </select>
+      {/* Filters */}
+      <Grid fullWidth narrow className="mb-6">
+        <Column lg={16} md={8} sm={4}>
+          <Tile>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>
+              <Filter style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+              Filters
+            </h2>
+            <Grid fullWidth narrow>
+              <Column lg={3} md={4} sm={4} className="mb-4">
+                <Select
+                  id="type-filter"
+                  labelText="Type"
+                  value={filters.type || ''}
+                  onChange={(e) => setFilters({ ...filters, type: e.target.value || undefined })}
+                >
+                  <SelectItem value="" text="All Types" />
+                  <SelectItem value="TOP" text="Tops" />
+                  <SelectItem value="BOTTOM" text="Bottoms" />
+                  <SelectItem value="DRESS" text="Dresses" />
+                  <SelectItem value="OUTERWEAR" text="Outerwear" />
+                  <SelectItem value="SHOES" text="Shoes" />
+                  <SelectItem value="ACCESSORY" text="Accessories" />
+                </Select>
+              </Column>
 
-          <select
-            value={filters.season || ''}
-            onChange={(e) => setFilters({ ...filters, season: e.target.value || undefined })}
-            className="border rounded-lg p-2"
-          >
-            <option value="">All Seasons</option>
-            <option value="SPRING">Spring</option>
-            <option value="SUMMER">Summer</option>
-            <option value="FALL">Fall</option>
-            <option value="WINTER">Winter</option>
-            <option value="ALL_SEASON">All Season</option>
-          </select>
+              <Column lg={3} md={4} sm={4} className="mb-4">
+                <Select
+                  id="season-filter"
+                  labelText="Season"
+                  value={filters.season || ''}
+                  onChange={(e) => setFilters({ ...filters, season: e.target.value || undefined })}
+                >
+                  <SelectItem value="" text="All Seasons" />
+                  <SelectItem value="SPRING" text="Spring" />
+                  <SelectItem value="SUMMER" text="Summer" />
+                  <SelectItem value="FALL" text="Fall" />
+                  <SelectItem value="WINTER" text="Winter" />
+                  <SelectItem value="ALL_SEASON" text="All Season" />
+                </Select>
+              </Column>
 
-          <select
-            value={filters.status || ''}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}
-            className="border rounded-lg p-2"
-          >
-            <option value="">All Status</option>
-            <option value="AVAILABLE">Available</option>
-            <option value="IN_LAUNDRY">In Laundry</option>
-            <option value="UNAVAILABLE">Unavailable</option>
-          </select>
+              <Column lg={3} md={4} sm={4} className="mb-4">
+                <Select
+                  id="status-filter"
+                  labelText="Status"
+                  value={filters.status || ''}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}
+                >
+                  <SelectItem value="" text="All Status" />
+                  <SelectItem value="AVAILABLE" text="Available" />
+                  <SelectItem value="IN_LAUNDRY" text="In Laundry" />
+                  <SelectItem value="UNAVAILABLE" text="Unavailable" />
+                </Select>
+              </Column>
 
-          <input
-            type="text"
-            placeholder="Color..."
-            value={filters.color || ''}
-            onChange={(e) => setFilters({ ...filters, color: e.target.value || undefined })}
-            className="border rounded-lg p-2"
-          />
+              <Column lg={3} md={4} sm={4} className="mb-4">
+                <TextInput
+                  id="color-filter"
+                  labelText="Color"
+                  placeholder="e.g., blue, red..."
+                  value={filters.color || ''}
+                  onChange={(e) => setFilters({ ...filters, color: e.target.value || undefined })}
+                />
+              </Column>
 
-          <Button variant="secondary" onClick={() => setFilters({})}>
-            Clear Filters
-          </Button>
-        </div>
-      </div>
+              <Column lg={4} md={4} sm={4} className="mb-4 flex items-end">
+                <Button
+                  kind="secondary"
+                  onClick={() => setFilters({})}
+                >
+                  Clear All Filters
+                </Button>
+              </Column>
+            </Grid>
+          </Tile>
+        </Column>
+      </Grid>
 
+      {/* Results */}
+      <Grid fullWidth narrow className="mb-4">
+        <Column lg={16} md={8} sm={4}>
+          <p style={{ color: 'var(--cds-text-secondary)' }}>
+            {loading ? 'Loading...' : `${garments.length} garment${garments.length !== 1 ? 's' : ''} found`}
+          </p>
+        </Column>
+      </Grid>
+
+      {/* Garments Grid */}
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Loading garments...</p>
+        <div className="flex justify-center py-12">
+          <Loading description="Loading garments..." withOverlay={false} />
         </div>
       ) : garments.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No garments found. Upload some clothes!</p>
-        </div>
+        <Grid fullWidth narrow>
+          <Column lg={16} md={8} sm={4}>
+            <Tile className="text-center py-12">
+              <p style={{ color: 'var(--cds-text-secondary)', marginBottom: '1rem' }}>
+                No garments found. Upload some clothes to get started!
+              </p>
+              <Button onClick={() => setUploadModalOpen(true)} renderIcon={Upload}>
+                Upload Your First Garment
+              </Button>
+            </Tile>
+          </Column>
+        </Grid>
       ) : (
-        <>
-          <div className="flex justify-between items-center">
-            <p className="text-gray-600">{garments.length} garments</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {garments.map((garment) => (
-              <GarmentCard
-                key={garment.id}
-                garment={garment}
-                onDelete={handleDelete}
-                onLaundry={handleLaundry}
-              />
-            ))}
-          </div>
-        </>
+        <GarmentGrid
+          garments={garments}
+          onDelete={handleDelete}
+          onLaundry={handleLaundry}
+        />
       )}
+
+      {/* Upload Modal */}
+      <UploadModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onSuccess={(garment) => {
+          setGarments([...garments, garment]);
+        }}
+      />
     </div>
   );
 }

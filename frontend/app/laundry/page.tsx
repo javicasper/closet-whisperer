@@ -1,13 +1,30 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Button,
+  DataTable,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableBody,
+  TableCell,
+  TableContainer,
+  InlineNotification,
+  Loading,
+  Grid,
+  Column,
+  Tag,
+} from '@carbon/react';
+import { Renew, CheckmarkOutline } from '@carbon/icons-react';
 import { getLaundryQueue, removeFromLaundry } from '@/lib/api';
-import GarmentCard from '@/components/GarmentCard';
-import { Button } from '@/components/ui/button';
+import { Garment } from '@/types';
 
 export default function LaundryPage() {
-  const [laundryItems, setLaundryItems] = useState<any[]>([]);
+  const [garments, setGarments] = useState<Garment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadLaundry();
@@ -15,71 +32,165 @@ export default function LaundryPage() {
 
   const loadLaundry = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getLaundryQueue();
-      setLaundryItems(data);
+      setGarments(Array.isArray(data) ? data : (data as any).garments || []);
     } catch (error) {
       console.error('Load error:', error);
+      setError('Failed to load laundry queue.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRemove = async (garmentId: string) => {
+  const handleReturnToCloset = async (id: string) => {
     try {
-      await removeFromLaundry(garmentId);
-      setLaundryItems(laundryItems.filter((item) => item.garmentId !== garmentId));
-      alert('Removed from laundry!');
+      await removeFromLaundry(id);
+      setGarments(garments.filter((g) => g.id !== id));
     } catch (error) {
-      console.error('Remove error:', error);
-      alert('Failed to remove from laundry');
+      console.error('Return error:', error);
+      setError('Failed to return garment to closet.');
     }
   };
 
+  const headers = [
+    { key: 'type', header: 'Type' },
+    { key: 'color', header: 'Color' },
+    { key: 'season', header: 'Season' },
+    { key: 'added', header: 'Added to Laundry' },
+    { key: 'actions', header: 'Actions' },
+  ];
+
+  const rows = garments.map((garment) => ({
+    id: garment.id,
+    type: garment.type || '-',
+    color: garment.color || '-',
+    season: garment.season || '-',
+    added: garment.updated_at
+      ? new Date(garment.updated_at).toLocaleDateString()
+      : '-',
+    actions: garment.id,
+  }));
+
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">🧺 Laundry Queue</h1>
-        <Button onClick={loadLaundry}>Refresh</Button>
-      </div>
+    <div>
+      {/* Header */}
+      <Grid fullWidth narrow className="mb-6">
+        <Column lg={12} md={6} sm={4}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+            Laundry Queue
+          </h1>
+          <p style={{ color: 'var(--cds-text-secondary)' }}>
+            Garments currently in the laundry
+          </p>
+        </Column>
+        <Column lg={4} md={2} sm={4} className="flex items-end justify-end">
+          <Button
+            kind="secondary"
+            renderIcon={Renew}
+            onClick={loadLaundry}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+        </Column>
+      </Grid>
 
+      {/* Error Notification */}
+      {error && (
+        <Grid fullWidth narrow className="mb-4">
+          <Column lg={16} md={8} sm={4}>
+            <InlineNotification
+              kind="error"
+              title="Error"
+              subtitle={error}
+              onCloseButtonClick={() => setError(null)}
+            />
+          </Column>
+        </Grid>
+      )}
+
+      {/* Stats */}
+      <Grid fullWidth narrow className="mb-6">
+        <Column lg={16} md={8} sm={4}>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <Tag type="blue" size="md">
+              {garments.length} item{garments.length !== 1 ? 's' : ''} in laundry
+            </Tag>
+          </div>
+        </Column>
+      </Grid>
+
+      {/* Data Table */}
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Loading laundry...</p>
+        <div className="flex justify-center py-12">
+          <Loading description="Loading laundry queue..." withOverlay={false} />
         </div>
-      ) : laundryItems.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No items in laundry!</p>
-        </div>
+      ) : garments.length === 0 ? (
+        <Grid fullWidth narrow>
+          <Column lg={16} md={8} sm={4}>
+            <div className="text-center py-12" style={{ background: 'var(--cds-layer-01)', padding: '3rem', borderRadius: '4px' }}>
+              <p style={{ color: 'var(--cds-text-secondary)', marginBottom: '1rem', fontSize: '1.125rem' }}>
+                No garments in laundry! 🎉
+              </p>
+              <p style={{ color: 'var(--cds-text-secondary)' }}>
+                Your closet is fully available.
+              </p>
+            </div>
+          </Column>
+        </Grid>
       ) : (
-        <>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-sm text-yellow-800">
-              {laundryItems.length} item(s) in laundry. These items won't appear
-              in outfit suggestions until you mark them as available.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {laundryItems.map((item) => (
-              <div key={item.id} className="relative">
-                <GarmentCard garment={item.garment} />
-                <Button
-                  size="sm"
-                  className="absolute top-2 left-2"
-                  onClick={() => handleRemove(item.garmentId)}
-                >
-                  Mark Clean
-                </Button>
-                {item.estimatedAvailableAt && (
-                  <div className="mt-2 text-xs text-gray-600 text-center">
-                    Available: {new Date(item.estimatedAvailableAt).toLocaleDateString()}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
+        <Grid fullWidth narrow>
+          <Column lg={16} md={8} sm={4}>
+            <DataTable rows={rows} headers={headers}>
+              {({
+                rows,
+                headers,
+                getTableProps,
+                getHeaderProps,
+                getRowProps,
+              }: any) => (
+                <TableContainer>
+                  <Table {...getTableProps()}>
+                    <TableHead>
+                      <TableRow>
+                        {headers.map((header: any) => (
+                          <TableHeader {...getHeaderProps({ header })} key={header.key}>
+                            {header.header}
+                          </TableHeader>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {rows.map((row: any) => (
+                        <TableRow {...getRowProps({ row })} key={row.id}>
+                          {row.cells.map((cell: any) => {
+                            if (cell.info.header === 'actions') {
+                              return (
+                                <TableCell key={cell.id}>
+                                  <Button
+                                    size="sm"
+                                    kind="tertiary"
+                                    renderIcon={CheckmarkOutline}
+                                    onClick={() => handleReturnToCloset(row.id)}
+                                  >
+                                    Return to Closet
+                                  </Button>
+                                </TableCell>
+                              );
+                            }
+                            return <TableCell key={cell.id}>{cell.value}</TableCell>;
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </DataTable>
+          </Column>
+        </Grid>
       )}
     </div>
   );

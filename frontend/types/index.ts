@@ -4,36 +4,37 @@ export type GarmentStatus = 'AVAILABLE' | 'IN_LAUNDRY' | 'UNAVAILABLE';
 
 export interface Garment {
   id: string;
-  imageUrl: string;
+  image_url: string;
   type: GarmentType;
-  color: string;
-  season: GarmentSeason[];
-  occasion: string[];
+  color?: string;
+  season?: GarmentSeason;
+  occasion?: string;
   status: GarmentStatus;
   description?: string;
   brand?: string;
   metadata?: any;
-  createdAt: string;
-  updatedAt: string;
-  laundryQueue?: LaundryQueue;
+  created_at: string;
+  updated_at: string;
+  laundry_queue?: LaundryQueue;
 }
 
 export interface LaundryQueue {
   id: string;
-  garmentId: string;
-  addedAt: string;
-  estimatedAvailableAt?: string;
+  garment_id: string;
+  added_at: string;
+  estimated_available_at?: string;
 }
 
 export interface Outfit {
   id: string;
   name: string;
-  aiSuggestion: boolean;
+  ai_suggestion: boolean;
   prompt?: string;
   metadata?: any;
-  createdAt: string;
-  updatedAt: string;
-  garments: OutfitGarment[];
+  created_at: string;
+  updated_at: string;
+  garment_ids: string[];
+  garments?: OutfitGarment[];
 }
 
 export interface OutfitGarment {

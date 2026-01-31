@@ -29,8 +29,8 @@ export default function GarmentCard({
   };
 
   const altText = garment.description 
-    ? `${garment.color} ${garment.type.toLowerCase()} - ${garment.description}`
-    : `${garment.color} ${garment.type.toLowerCase()}`;
+    ? `${garment.color || ''} ${garment.type.toLowerCase()} - ${garment.description}`
+    : `${garment.color || ''} ${garment.type.toLowerCase()}`;
 
   return (
     <div
@@ -62,7 +62,7 @@ export default function GarmentCard({
           </div>
         ) : (
           <Image
-            src={garment.imageUrl}
+            src={garment.image_url}
             alt={altText}
             fill
             className="object-cover"
@@ -83,7 +83,7 @@ export default function GarmentCard({
             <h3 className="font-semibold text-lg capitalize">
               {garment.type.toLowerCase()}
             </h3>
-            <p className="text-sm text-gray-600 capitalize">{garment.color}</p>
+            {garment.color && <p className="text-sm text-gray-600 capitalize">{garment.color}</p>}
           </div>
           {garment.brand && (
             <span className="text-xs bg-gray-200 px-2 py-1 rounded">
@@ -99,16 +99,16 @@ export default function GarmentCard({
         )}
         
         <div className="flex flex-wrap gap-1 mb-3">
-          {garment.season.map((s) => (
-            <span key={s} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-              {s}
+          {garment.season && (
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              {garment.season}
             </span>
-          ))}
-          {garment.occasion.map((o) => (
-            <span key={o} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-              {o}
+          )}
+          {garment.occasion && (
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+              {garment.occasion}
             </span>
-          ))}
+          )}
         </div>
         
         <div className="flex gap-2">
