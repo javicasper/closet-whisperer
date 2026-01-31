@@ -15,4 +15,21 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
-export const config = envSchema.parse(process.env);
+// Validate environment variables with helpful error messages
+let config: z.infer<typeof envSchema>;
+
+try {
+  config = envSchema.parse(process.env);
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    console.error('❌ Invalid environment variables:');
+    error.errors.forEach((err) => {
+      console.error(`  - ${err.path.join('.')}: ${err.message}`);
+    });
+    console.error('\n💡 Check your .env file and make sure all required variables are set.');
+    console.error('   You can copy .env.example to .env and fill in the values.\n');
+  }
+  process.exit(1);
+}
+
+export { config };

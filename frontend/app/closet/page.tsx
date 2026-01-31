@@ -6,6 +6,7 @@ import { useGarmentStore } from '@/store/garments.store';
 import GarmentCard from '@/components/GarmentCard';
 import UploadGarment from '@/components/UploadGarment';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
 
 export default function ClosetPage() {
   const { garments, setGarments, removeGarment, updateGarment, filters, setFilters } = useGarmentStore();
@@ -18,24 +19,28 @@ export default function ClosetPage() {
   const loadGarments = async () => {
     setLoading(true);
     try {
-      const data = await getGarments(filters);
+      const response = await getGarments(filters);
+      // Handle new pagination response format
+      const data = Array.isArray(response) ? response : response.data || [];
       setGarments(data);
     } catch (error) {
       console.error('Load error:', error);
+      toast.error('Failed to load garments');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this garment?')) return;
+    if (!confirm('Are you sure you want to delete this garment? This action cannot be undone.')) return;
     
     try {
       await deleteGarment(id);
       removeGarment(id);
+      toast.success('Garment deleted successfully');
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Failed to delete garment');
+      toast.error('Failed to delete garment');
     }
   };
 
@@ -43,10 +48,10 @@ export default function ClosetPage() {
     try {
       await addToLaundry(id);
       updateGarment(id, { status: 'IN_LAUNDRY' });
-      alert('Added to laundry!');
+      toast.success('Added to laundry! 🧺');
     } catch (error) {
       console.error('Laundry error:', error);
-      alert('Failed to add to laundry');
+      toast.error('Failed to add to laundry');
     }
   };
 

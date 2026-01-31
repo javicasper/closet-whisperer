@@ -87,7 +87,7 @@ Be accurate and concise. Only return valid JSON.`,
     ];
 
     const response = await this.makeRequest(messages);
-    const content = response.choices[0].message.content;
+    const content = response.choices[0]?.message?.content;
     
     if (!content) {
       throw new Error('No content returned from OpenRouter');
@@ -101,7 +101,12 @@ Be accurate and concise. Only return valid JSON.`,
       throw new Error('Failed to extract JSON from response');
     }
     
-    return JSON.parse(jsonStr.trim());
+    try {
+      return JSON.parse(jsonStr.trim());
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', jsonStr);
+      throw new Error('Invalid JSON response from AI');
+    }
   }
 
   async generateOutfitSuggestions(
@@ -244,28 +249,46 @@ Return your response in JSON format:
     messages: OpenRouterMessage[],
     tools?: OpenRouterTool[]
   ): Promise<OpenRouterResponse> {
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-        'HTTP-Referer': 'https://github.com/javicasper/closet-whisperer',
-        'X-Title': 'Closet Whisperer',
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages,
-        tools,
-        tool_choice: tools ? 'auto' : undefined,
-      }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+          'HTTP-Referer': 'https://github.com/javicasper/closet-whisperer',
+          'X-Title': 'Closet Whisperer',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages,
+          tools,
+          tool_choice: tools ? 'auto' : undefined,
+        }),
+      });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+      if (!response.ok) {
+        const error = await response.text();
+        
+        // Handle rate limiting
+        if (response.status === 429) {
+          throw new Error('OpenRouter rate limit exceeded. Please try again later.');
+        }
+        
+        // Handle authentication errors
+        if (response.status === 401) {
+          throw new Error('Invalid OpenRouter API key');
+        }
+        
+        throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+      }
+
+      return response.json() as Promise<OpenRouterResponse>;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('fetch')) {
+        throw new Error('Failed to connect to OpenRouter API. Please check your internet connection.');
+      }
+      throw error;
     }
-
-    return response.json() as Promise<OpenRouterResponse>;
   }
 }
 

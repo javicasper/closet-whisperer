@@ -4,6 +4,7 @@ import { prisma } from '../utils/prisma.js';
 import { storageService } from '../services/storage.service.js';
 import { aiService } from '../services/ai.service.js';
 import { GarmentStatus } from '@prisma/client';
+import { config } from '../config.js';
 
 const garmentSchema = z.object({
   type: z.enum(['TOP', 'BOTTOM', 'DRESS', 'OUTERWEAR', 'SHOES', 'ACCESSORY']),
@@ -14,6 +15,23 @@ const garmentSchema = z.object({
   brand: z.string().optional(),
 });
 
+/**
+ * Transform garment imageUrl to use presigned endpoint
+ */
+function transformGarmentImageUrl(garment: any): any {
+  if (!garment) return garment;
+  
+  // Replace imageUrl with the presigned endpoint
+  const backendUrl = config.NODE_ENV === 'production' 
+    ? process.env.BACKEND_URL || `http://localhost:${config.PORT}`
+    : `http://localhost:${config.PORT}`;
+  
+  return {
+    ...garment,
+    imageUrl: `${backendUrl}/api/garments/${garment.id}/image`,
+  };
+}
+
 export async function garmentRoutes(fastify: FastifyInstance) {
   // Upload and create garment with AI analysis
   fastify.post('/garments', async (request, reply) => {
@@ -23,8 +41,22 @@ export async function garmentRoutes(fastify: FastifyInstance) {
       return reply.code(400).send({ error: 'No file uploaded' });
     }
 
+    // Validate file type
+    const validMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validMimeTypes.includes(data.mimetype)) {
+      return reply.code(400).send({ 
+        error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' 
+      });
+    }
+
     try {
       const buffer = await data.toBuffer();
+      
+      // Validate file size (already limited by multipart, but double-check)
+      if (buffer.length > 10 * 1024 * 1024) {
+        return reply.code(400).send({ error: 'File size exceeds 10MB limit' });
+      }
+
       const { url, key } = await storageService.uploadImage(buffer, data.mimetype);
 
       // Use AI to analyze the garment
@@ -56,10 +88,12 @@ export async function garmentRoutes(fastify: FastifyInstance) {
   fastify.get('/garments', async (request, reply) => {
     const querySchema = z.object({
       type: z.enum(['TOP', 'BOTTOM', 'DRESS', 'OUTERWEAR', 'SHOES', 'ACCESSORY']).optional(),
-      color: z.string().optional(),
+      color: z.string().max(50).optional(), // Limit color string length
       season: z.enum(['SPRING', 'SUMMER', 'FALL', 'WINTER', 'ALL_SEASON']).optional(),
-      occasion: z.string().optional(),
+      occasion: z.string().max(50).optional(), // Limit occasion string length
       status: z.enum(['AVAILABLE', 'IN_LAUNDRY', 'UNAVAILABLE']).optional(),
+      limit: z.string().transform(Number).default('50').optional(),
+      offset: z.string().transform(Number).default('0').optional(),
     });
 
     try {
@@ -78,15 +112,62 @@ export async function garmentRoutes(fastify: FastifyInstance) {
           laundryQueue: true,
         },
         orderBy: { createdAt: 'desc' },
+        take: params.limit,
+        skip: params.offset,
       });
 
-      return reply.send(garments);
+      // Get total count for pagination
+      const total = await prisma.garment.count({ where });
+
+      // Transform imageUrls to use presigned endpoint
+      const transformedGarments = garments.map(transformGarmentImageUrl);
+
+      return reply.send({
+        data: transformedGarments,
+        pagination: {
+          total,
+          limit: params.limit,
+          offset: params.offset,
+          hasMore: params.offset! + params.limit! < total,
+        },
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return reply.code(400).send({ error: error.errors });
       }
       console.error('Error listing garments:', error);
       return reply.code(500).send({ error: 'Failed to list garments' });
+    }
+  });
+
+  // Get presigned image URL for a garment (redirects to MinIO presigned URL)
+  fastify.get('/garments/:id/image', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const garment = await prisma.garment.findUnique({
+      where: { id },
+      select: { id: true, metadata: true },
+    });
+
+    if (!garment) {
+      return reply.code(404).send({ error: 'Garment not found' });
+    }
+
+    // Get storage key from metadata
+    const storageKey = (garment.metadata as any)?.storageKey;
+    if (!storageKey) {
+      return reply.code(404).send({ error: 'Image not found' });
+    }
+
+    try {
+      // Generate presigned URL (expires in 1 hour)
+      const presignedUrl = await storageService.getPresignedUrl(storageKey, 3600);
+      
+      // Redirect to the presigned URL
+      return reply.redirect(302, presignedUrl);
+    } catch (error) {
+      console.error('Error generating presigned URL:', error);
+      return reply.code(500).send({ error: 'Failed to generate image URL' });
     }
   });
 
@@ -110,7 +191,10 @@ export async function garmentRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ error: 'Garment not found' });
     }
 
-    return reply.send(garment);
+    // Transform imageUrl to use presigned endpoint
+    const transformedGarment = transformGarmentImageUrl(garment);
+
+    return reply.send(transformedGarment);
   });
 
   // Update garment
@@ -229,6 +313,12 @@ export async function garmentRoutes(fastify: FastifyInstance) {
       orderBy: { addedAt: 'desc' },
     });
 
-    return reply.send(laundryItems);
+    // Transform garment imageUrls to use presigned endpoint
+    const transformedItems = laundryItems.map(item => ({
+      ...item,
+      garment: transformGarmentImageUrl(item.garment),
+    }));
+
+    return reply.send(transformedItems);
   });
 }

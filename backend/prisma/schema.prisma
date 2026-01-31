@@ -49,6 +49,9 @@ model Garment {
   laundryQueue LaundryQueue?
   outfits      OutfitGarment[]
 
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
   @@map("garments")
 }
 

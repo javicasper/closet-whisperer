@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.next
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+README.md
+.vscode
+*.test.ts
+*.spec.ts
+coverage
+.DS_Store
+playwright-report
+test-results

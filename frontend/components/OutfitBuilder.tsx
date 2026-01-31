@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { generateOutfit, createOutfit } from '@/lib/api';
 import { useGarmentStore } from '@/store/garments.store';
 import GarmentCard from './GarmentCard';
 import { OutfitSuggestion } from '@/types';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
 
 export default function OutfitBuilder() {
   const [prompt, setPrompt] = useState('');
@@ -13,20 +14,50 @@ export default function OutfitBuilder() {
   const [suggestions, setSuggestions] = useState<OutfitSuggestion[]>([]);
   const [reasoning, setReasoning] = useState('');
   const { garments } = useGarmentStore();
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim()) {
+      toast.warning('Please enter a description for your outfit');
+      return;
+    }
 
+    // Cancel previous request if still running
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
     setLoading(true);
+    setSuggestions([]);
+    setReasoning('');
+
     try {
       const result = await generateOutfit(prompt);
       setSuggestions(result.suggestions);
       setReasoning(result.reasoning);
+      
+      if (result.suggestions.length === 0) {
+        toast.info('No suitable outfit combinations found. Try adding more garments or adjusting your request.');
+      } else {
+        toast.success(`Generated ${result.suggestions.length} outfit suggestion(s)! ✨`);
+      }
     } catch (error) {
       console.error('Generate error:', error);
-      alert('Failed to generate outfit suggestions');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate outfit suggestions';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -39,10 +70,10 @@ export default function OutfitBuilder() {
         prompt,
         metadata: { reasoning: suggestion.reasoning },
       });
-      alert('Outfit saved successfully!');
+      toast.success('Outfit saved successfully! 💾');
     } catch (error) {
       console.error('Save error:', error);
-      alert('Failed to save outfit');
+      toast.error('Failed to save outfit');
     }
   };
 
@@ -69,8 +100,19 @@ export default function OutfitBuilder() {
             onClick={handleGenerate}
             disabled={loading || !prompt.trim()}
             className="w-full h-12"
+            aria-label={loading ? 'Generating outfit suggestions' : 'Generate outfit suggestions'}
           >
-            {loading ? 'Generating suggestions...' : 'Generate Outfit'}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Generating suggestions...
+              </span>
+            ) : (
+              '✨ Generate Outfit'
+            )}
           </Button>
         </div>
       </div>
