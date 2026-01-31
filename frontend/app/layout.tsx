@@ -1,6 +1,6 @@
 'use client';
 
-import './globals.css';
+import './globals.scss';
 import { useState } from 'react';
 import { Content } from '@carbon/react';
 import ThemeProvider from '@/components/theme/ThemeProvider';
