@@ -1,0 +1,90 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GarmentType {
+  TOP
+  BOTTOM
+  DRESS
+  OUTERWEAR
+  SHOES
+  ACCESSORY
+}
+
+enum GarmentSeason {
+  SPRING
+  SUMMER
+  FALL
+  WINTER
+  ALL_SEASON
+}
+
+enum GarmentStatus {
+  AVAILABLE
+  IN_LAUNDRY
+  UNAVAILABLE
+}
+
+model Garment {
+  id          String         @id @default(cuid())
+  imageUrl    String         @map("image_url")
+  type        GarmentType
+  color       String
+  season      GarmentSeason[]
+  occasion    String[]       // ['casual', 'formal', 'sport']
+  status      GarmentStatus  @default(AVAILABLE)
+  description String?
+  brand       String?
+  metadata    Json?          // Additional AI-extracted metadata
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  laundryQueue LaundryQueue?
+  outfits      OutfitGarment[]
+
+  @@map("garments")
+}
+
+model Outfit {
+  id           String          @id @default(cuid())
+  name         String
+  aiSuggestion Boolean         @default(false) @map("ai_suggestion")
+  prompt       String?         // Original user prompt if AI-generated
+  metadata     Json?           // AI reasoning, style notes
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  garments     OutfitGarment[]
+
+  @@map("outfits")
+}
+
+model OutfitGarment {
+  id        String  @id @default(cuid())
+  outfitId  String  @map("outfit_id")
+  garmentId String  @map("garment_id")
+
+  outfit    Outfit  @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  garment   Garment @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+
+  @@unique([outfitId, garmentId])
+  @@map("outfit_garments")
+}
+
+model LaundryQueue {
+  id                   String   @id @default(cuid())
+  garmentId            String   @unique @map("garment_id")
+  addedAt              DateTime @default(now()) @map("added_at")
+  estimatedAvailableAt DateTime? @map("estimated_available_at")
+
+  garment              Garment  @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+
+  @@map("laundry_queue")
+}
